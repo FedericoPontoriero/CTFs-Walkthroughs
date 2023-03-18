@@ -1,0 +1,35 @@
+#+title: Python Wrangling
+
+#+begin_quote
+Python scripts are invoked kind of like programs in the Terminal... Can you run this Python script using this password to get the flag?
+#+end_quote
+
+** Solution
+
+In this case we have 3 files to download and play with.
+The script, the password and the flag file.
+If we simply try to open the flag file it will be encrypted so we will try to use
+the script that has been provided to solve this.
+
+Let's take a look at the script.
+We can see it defines in series of if statements the command line arguments that it
+accepts. We see that the -h flag stands for help.
+
+If we do:
+#+begin_src sh
+python3 ende.py -h
+#+end_src
+
+It will tell us that to decrypt a file called pole.txt we need to input:
+#+begin_src sh
+python3 ende.py -d pole.txt
+#+end_src
+
+Let's do it with the flag.txt.en.
+It will then ask us for the password and we already have it in the other file pw.txt.
+So we can copy the contents of the file, input it as the password in the terminal and
+it will give us the flag.
+
+As a bonus notice that the script accepts the -e flag, that stands for encode. This
+means this can be use also to encrypt strings, but of course, this goes beyond the
+challenge
