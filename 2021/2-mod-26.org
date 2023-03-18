@@ -1,0 +1,34 @@
+#+title: Mod 26
+#+begin_quote
+Cryptography can be easy, do you know what ROT13 is? cvpbPGS{arkg_gvzr_V'yy_gel_2_ebhaqf_bs_ebg13_jdJBFOXJ}
+#+end_quote
+
+** Solution
+In this challenge we are invited to investigate about some cryptographic system
+called ROT13. If we simply google it, we can see that is a Caesar cipher in which the
+letters of the message are shifted 13 positions.
+
+Of course, as the hint tells us, we can use an online resource to do the dirty work
+and get the flag that way. But the interesting added challenge will be to write our
+own script to do it.
+
+If we investigate a little about ASCII we can know about the code that corresponds to
+the letters of the alphabet. That is how computers interpret letters.
+This means that our script should take a string of characters, look what code
+corresponds to each of them and shift them 13 positions.
+
+This we can do in the following manner:
+#+begin_src python
+def rot13(s):
+    # We define the function accepting s for strings and defining chars for all the letters and their uppercase versions
+    chars = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz"
+    # If you notice the index of the uppercase letters are all even numbers while the index of the lower case letters are odd.
+    # This odd-even pattern allows us to safely add the amount needed without having to worry about the case.
+    trans = chars[26:]+chars[:26]
+    # The reason you add 26 is because the string has doubled in letters due to the upper case letters. However, the shift is still 13 spaces on the alphabet.
+    rot_char = lambda c: trans[chars.find(c)] if chars.find(c) > -1 else c
+    return ''.join(rot_char(c) for c in s)
+#+end_src
+
+Now, if we call the function rot13 using the string given to us as the argument
+it will give us the flag and the challenge is completed.
