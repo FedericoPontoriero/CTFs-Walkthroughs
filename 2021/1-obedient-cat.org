@@ -1,0 +1,19 @@
+#+title: 1 Obedient Cat
+#+BEGIN_QUOTE
+This file has a flag in plain sight (aka "in-the-clear").
+#+END_QUOTE
+
+** Solution
+This is a very simple challenge, the only thing we need to do is to download
+the file that is provided clicking it or using wget and the path to the file.
+
+Then we will notice that the flag file has no extension, so we can't open it just
+by double clicking on it. But what we can do is use a text editor or simply using
+
+#+BEGIN_SRC sh
+cat flag
+#+END_SRC
+on the directory where we downloaded the file and it will give us the flag.
+
+We can then copy it using the mouse or piping the output to xclip or some other
+clipboard utility and then paste it in Pico.
