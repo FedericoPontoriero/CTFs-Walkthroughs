@@ -108,7 +108,6 @@ data and even run commands.
 pip install --upgrade flake8
 #+end_src
 
-#+RESULTS:
 #+begin_quote
 Defaulting to user installation because normal site-packages is not writeable
 Requirement already satisfied: flake8 in /home/fede/.local/lib/python3.8/site-packages (6.0.0)
