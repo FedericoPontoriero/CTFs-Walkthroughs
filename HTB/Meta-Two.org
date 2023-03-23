@@ -1,11 +1,10 @@
 #+title: Meta Two
-#+result: script
 
 ** Connection and nmap
 First we connect to the openvpn that HTB provides us and spin the machine
 Then we will use nmap, as usual for enumeration:
 
-#+begin_src sh
+#+begin_src shell
 sudo nmap -sC -sV -T4 10.10.11.186
 #+end_src
 
@@ -22,7 +21,7 @@ We can gather that there are 3 open ports: 21 (ftp), 22 (ssh) and 80 (http).
 
 The version of OpenSSH that is being used does not seem to be vulnerable but
 we can try other things such as connecting through ftp:
-#+begin_src sh
+#+begin_src shell
 ftp 10.10.11.186
 #+end_src
 
@@ -52,7 +51,7 @@ but we can see it's a Wordpress site. We can play around with the forms and
 explore a little. Now we will use wpscan which is a command line tool for Wordpress
 security.
 
-#+begin_src sh
+#+begin_src shell
 wpscan --url http://metapress.htb
 #+end_src
 
@@ -71,7 +70,7 @@ the fact that is telling us that the version of Wordpress (5.6.2) is identified
 as insecure. So we will look for the vulnerabilities associated with this version.
 
 So the command we have to use would look like something like this:
-#+begin_src sh
+#+begin_src shell
 curl -i 'http://metapress.htb.com/wp-admin/admin-ajax.php'--data
 'action=bookingpress_front_get_category_services&_wpnonce=1b624223cc&category_id=29&total_service=-7507)
 UNION ALL SELECT @@version,@@version_comment,@@version_compile_os,-5,-5,-5,-5,-5,-5--
@@ -104,18 +103,14 @@ Now we can use sqlmap, which is a tool for automating the process of detecting
 and exploiting SQL injection vulnerabilities. We can use it to identify the
 database management system, enumerate databases, tables and columns, extract the
 data and even run commands.
-#+begin_src shell
+
+#+begin_src shell :results output
 pip install --upgrade flake8
 #+end_src
 
 #+RESULTS:
-#+begin_example
-
-
-| Defaulting  | to      | user       | installation                | because | normal                                        | site-packages | is      | not      | writeable |
-| Requirement | already | satisfied: | flake8                      | in      | /home/fede/.local/lib/python3.8/site-packages | (6.0.0)       |         |          |           |
-| Requirement | already | satisfied: | pyflakes<3.1.0,>=3.0.0      | in      | /home/fede/.local/lib/python3.8/site-packages | (from         | flake8) | (3.0.1)  |           |
-| Requirement | already | satisfied: | mccabe<0.8.0,>=0.7.0        | in      | /home/fede/.local/lib/python3.8/site-packages | (from         | flake8) | (0.7.0)  |           |
-| Requirement | already | satisfied: | pycodestyle<2.11.0,>=2.10.0 | in      | /home/fede/.local/lib/python3.8/site-packages | (from         | flake8) | (2.10.0) |           |
-
-#+end_example
+: Defaulting to user installation because normal site-packages is not writeable
+: Requirement already satisfied: flake8 in /home/fede/.local/lib/python3.8/site-packages (6.0.0)
+: Requirement already satisfied: pyflakes<3.1.0,>=3.0.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (3.0.1)
+: Requirement already satisfied: pycodestyle<2.11.0,>=2.10.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (2.10.0)
+: Requirement already satisfied: mccabe<0.8.0,>=0.7.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (0.7.0)
