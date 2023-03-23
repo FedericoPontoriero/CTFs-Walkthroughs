@@ -101,10 +101,11 @@ and exploiting SQL injection vulnerabilities. We can use it to identify the
 database management system, enumerate databases, tables and columns, extract the
 data and even run commands.
 
-#+begin_src shell :results output :wrap "quote"
+#+begin_src shell :results output :wrap "quote" :exports both
 pip install --upgrade flake8
 #+end_src
 
+#+RESULTS:
 #+begin_quote
 Defaulting to user installation because normal site-packages is not writeable
 Requirement already satisfied: flake8 in /home/fede/.local/lib/python3.8/site-packages (6.0.0)
