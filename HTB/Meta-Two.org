@@ -112,9 +112,3 @@ print("Hello World")
 #+begin_verse
 Hello World
 #+end_verse
-#+begin_comment
-Hello World
-#+end_comment
-#+begin_quote
-Hello World
-#+end_quote
