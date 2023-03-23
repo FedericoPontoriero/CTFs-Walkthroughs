@@ -4,11 +4,9 @@
 First we connect to the openvpn that HTB provides us and spin the machine
 Then we will use nmap, as usual for enumeration:
 
-#+begin_src shell
+#+begin_src shell :results output :wrap "quote"
 sudo nmap -sC -sV -T4 10.10.11.186
 #+end_src
-
-#+RESULTS:
 
 The options are following:
 -sC: to use the default scripts
@@ -21,11 +19,10 @@ We can gather that there are 3 open ports: 21 (ftp), 22 (ssh) and 80 (http).
 
 The version of OpenSSH that is being used does not seem to be vulnerable but
 we can try other things such as connecting through ftp:
-#+begin_src shell
+
+#+begin_src shell :results output :wrap "quote"
 ftp 10.10.11.186
 #+end_src
-
-#+RESULTS:
 
 and trying to log as anonymous. This does not work.
 
@@ -104,25 +101,13 @@ and exploiting SQL injection vulnerabilities. We can use it to identify the
 database management system, enumerate databases, tables and columns, extract the
 data and even run commands.
 
-#+begin_src shell :results output :wrap "quote"
+#+begin_src shell :results output
 pip install --upgrade flake8
 #+end_src
 
 #+RESULTS:
-#+begin_quote
-Defaulting to user installation because normal site-packages is not writeable
-Requirement already satisfied: flake8 in /home/fede/.local/lib/python3.8/site-packages (6.0.0)
-Requirement already satisfied: mccabe<0.8.0,>=0.7.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (0.7.0)
-Requirement already satisfied: pyflakes<3.1.0,>=3.0.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (3.0.1)
-Requirement already satisfied: pycodestyle<2.11.0,>=2.10.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (2.10.0)
-#+end_quote
-
-#+begin_quote
-Defaulting to user installation because normal site-packages is not writeable
-Requirement already satisfied: flake8 in /home/fede/.local/lib/python3.8/site-packages (6.0.0)
-Requirement already satisfied: pycodestyle<2.11.0,>=2.10.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (2.10.0)
-Requirement already satisfied: pyflakes<3.1.0,>=3.0.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (3.0.1)
-Requirement already satisfied: mccabe<0.8.0,>=0.7.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (0.7.0)
-#+end_quote
-
-That is the output
+: Defaulting to user installation because normal site-packages is not writeable
+: Requirement already satisfied: flake8 in /home/fede/.local/lib/python3.8/site-packages (6.0.0)
+: Requirement already satisfied: mccabe<0.8.0,>=0.7.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (0.7.0)
+: Requirement already satisfied: pyflakes<3.1.0,>=3.0.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (3.0.1)
+: Requirement already satisfied: pycodestyle<2.11.0,>=2.10.0 in /home/fede/.local/lib/python3.8/site-packages (from flake8) (2.10.0)
