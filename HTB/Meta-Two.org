@@ -109,8 +109,13 @@ pip install --upgrade flake8
 #+end_src
 
 #+RESULTS:
+#+begin_example
+
+
 | Defaulting  | to      | user       | installation                | because | normal                                        | site-packages | is      | not      | writeable |
 | Requirement | already | satisfied: | flake8                      | in      | /home/fede/.local/lib/python3.8/site-packages | (6.0.0)       |         |          |           |
 | Requirement | already | satisfied: | pyflakes<3.1.0,>=3.0.0      | in      | /home/fede/.local/lib/python3.8/site-packages | (from         | flake8) | (3.0.1)  |           |
 | Requirement | already | satisfied: | mccabe<0.8.0,>=0.7.0        | in      | /home/fede/.local/lib/python3.8/site-packages | (from         | flake8) | (0.7.0)  |           |
 | Requirement | already | satisfied: | pycodestyle<2.11.0,>=2.10.0 | in      | /home/fede/.local/lib/python3.8/site-packages | (from         | flake8) | (2.10.0) |           |
+
+#+end_example
