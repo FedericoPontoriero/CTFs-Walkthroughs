@@ -104,11 +104,11 @@ and exploiting SQL injection vulnerabilities. We can use it to identify the
 database management system, enumerate databases, tables and columns, extract the
 data and even run commands.
 
-#+begin_src python :results output :wrap "verse"
+#+begin_src python :results output :wrap "comment"
 print("Hello World")
 #+end_src
 
 #+RESULTS:
-#+begin_verse
+#+begin_comment
 Hello World
-#+end_verse
+#+end_comment
