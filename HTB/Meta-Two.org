@@ -1,7 +1,7 @@
 #+title: Meta Two
 
 
-** Connection and nmap
+* Connection and nmap
 First we connect to the openvpn that HTB provides us and spin the machine
 Then we will use nmap, as usual for enumeration:
 
@@ -14,7 +14,7 @@ The options are following:
 -sV: probes the open ports for system information
 -T4: to define the aggressiveness of the scan
 
-** First steps
+* First steps
 
 We can gather that there are 3 open ports: 21 (ftp), 22 (ssh) and 80 (http).
 
@@ -42,7 +42,7 @@ apps.
 
 One way or another we should be able to browse the page now.
 
-** Looking for vulnerabilities
+* Looking for vulnerabilities
 
 We can look at the source code and it does not seem to be leaking any credentials
 but we can see it's a Wordpress site. We can play around with the forms and
@@ -97,7 +97,7 @@ Referrer-Policy: strict-origin-when-cross-origin
 [{"bookingpress_service_id":"10.5.15-MariaDB-0+deb11u1","bookingpress_category_id":"Debian 11","bookingpress_service_name":"debian-linux-gnu","bookingpress_service_price":"$1.00","bookingpress_service_duration_val":"2","bookingpress_service_duration_unit":"3","bookingpress_service_description":"4","bookingpress_service_position":"5","bookingpress_servicedate_created":"6","service_price_without_currency":1,"img_url":"http:\/\/metapress.htb\/wp-content\/plugins\/bookingpress-appointment-booking\/images\/placeholder-img.jpg"}]
 #+end_quote
 
-** Enumerating databases: Sqlmap
+* Enumerating databases: Sqlmap
 
 Now we can use sqlmap, which is a tool for automating the process of detecting
 and exploiting SQL injection vulnerabilities. We can use it to identify the
@@ -123,7 +123,7 @@ we can see that it found two users, admin and manager.
 Along side the names we can see the hashes that correspond to the passwords, so we
 will copy them to a file and try to crack them.
 
-** Cracking the passwords: John the Ripper
+* Cracking the passwords: John the Ripper
 
 #+begin_src shell :results output :wrap "quote" :exports both
 john password.txt --wordlist=/usr/share/wordlists/rockyou.txt
@@ -140,7 +140,7 @@ there is a subdomain called "wp-admin". So if we go to http://metapress.htb/wp-a
 we will encounter the Wordpress page for authentication, we enter the credentials
 and we are in!
 
-** Exploiting XXE
+* Exploiting XXE
 
 Looking around the vulnerabilities of this version of Wordpress I encounter this
 article: https://blog.wpsec.com/wordpress-xxe-in-media-library-cve-2021-29447/
@@ -255,7 +255,7 @@ There is a lot of hashes in there but the interesting thing is that we have a me
 FTP, the user and the password (hashed). We already tried to connect to ftp and we
 couldn't so maybe this could prove useful.
 
-** Getting the credentials
+* Getting the credentials
 
 #+begin_src shell :results output :wrap "quote" :exports both
 ftp 10.10.11.186
@@ -281,7 +281,7 @@ We input the password and we can see that it works!
 Now we can do an ls and find out that there is the user.txt file with the flag that
 we want.
 
-** Escalating the privileges
+* Escalating the privileges
 
 If we try to use sudo we will see that we cannot. However we can see that there is a
 .passpie directory. Passpie is a password manager for Linux and there is a .keys
@@ -300,7 +300,7 @@ And run it through john again:
 john --wordlist=/usr/share/wordlists/rockyou.txt pass_hash
 #+end_src
 And once it is done:
-#+begin_src shell :results output :wrap "quote" :exports both
+#+begin_src bash :results output :wrap "quote" :exports both
 john --wordlist=/usr/share/wordlists/rockyou.txt pass_hash
 #+end_src
 
@@ -314,9 +314,14 @@ And entering "blink182" as the Passphrase. Now we can see that the root user has
 'p7qfAZt4_A1xo_0x' as password.
 
 So we will:
-#+begin_src shell :results output :wrap "quote" :exports both
+#+begin_src sh :results output :wrap "quote" :exports both
 su root
 #+end_src
+
+#+RESULTS:
+#+begin_quote
+#+end_quote
+
 And enter that as the password and we are in! We are root!
 
 So let's end this, let's go to /root/root.txt and extract our flag from there.
