@@ -357,4 +357,4 @@ time trying to crack this.
 
 #+attr_html: :width 1200px
 #+attr_latex: :center nil :height 10cm :width 12cm
-[[/mnt/c/Users/Federico/Pictures/Screenshots/test.png]]
+[[https://federicopontoriero.github.io/images/test.png]]
