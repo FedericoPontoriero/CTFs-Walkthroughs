@@ -307,7 +307,10 @@ We input the password and we can see that it works!
 Now we can do an ls and find out that there is the user.txt file with the flag that
 we want.
 
-* Escalating the privileges
+* Escalating the privileges :ATTACH:
+:PROPERTIES:
+:ID:       0374669e-dc91-46ba-afd0-96884e122127
+:END:
 
 If we try to use sudo we will see that we cannot. However we can see that there is a
 .passpie directory. Passpie is a password manager for Linux and there is a .keys
