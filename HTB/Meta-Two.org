@@ -296,11 +296,11 @@ gpg2john key > pass_hash
 #+end_src
 
 And run it through john again:
-#+begin_src shell :results output :wrap "quote" :exports both
+#+begin_src sh :results output :wrap "quote" :exports both
 john --wordlist=/usr/share/wordlists/rockyou.txt pass_hash
 #+end_src
 And once it is done:
-#+begin_src bash :results output :wrap "quote" :exports both
+#+begin_src sh :results output :wrap "quote" :exports both
 john --wordlist=/usr/share/wordlists/rockyou.txt pass_hash
 #+end_src
 
@@ -314,7 +314,7 @@ And entering "blink182" as the Passphrase. Now we can see that the root user has
 'p7qfAZt4_A1xo_0x' as password.
 
 So we will:
-#+begin_src sh :results output :wrap "quote" :exports both
+#+begin_src shell :results output :wrap "quote" :exports both
 su root
 #+end_src
 
@@ -328,3 +328,6 @@ So let's end this, let's go to /root/root.txt and extract our flag from there.
 
 And that is it! I hope this was informative, I am still a noob but I had a great
 time trying to crack this.
+
+#+attr_html: :width 1500px
+[[/mnt/c/Users/Federico/Pictures/Screenshots/test.png]]
