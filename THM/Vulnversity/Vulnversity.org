@@ -1,0 +1,62 @@
+#+title: Vulnversity
+
+* Setup
+The first thing we need to do is to connect to the VPN provided by THM.
+The command to do that will look something like this:
+#+begin_src bash
+sudo openvpn /path/to/ovpnfile
+#+end_src
+There is no need to do much more than that normally but I had trouble in the past with the tun device so make sure to restart after a kernel update because the module may not be loaded.
+Also, and just for convenience, I like to make the IP address of the target machine a env variable.
+#+begin_src bash
+export IP=10.10.185.2
+#+end_src
+
+* Nmap
+We can start scanning for open ports like this:
+#+begin_src bash
+nmap -sV -sC $IP >> nmap.txt
+#+end_src
+- The -sV flag is used to enumerate the version of the services running.
+- The -sC flag is to indicate that it should use the default Nmap scripts.
+- You can use others like -p and the number of the port for a specific scanning.
+- We use the >> to redirect the output to a txt file so as to be able to reference later.
+** Questions
+- The first one is easy as the only thing you have to do is to count the number of ports.
+- The version of the proxy will be given as we used the -sV flag.
+- The -p-400 means that it will scan up to that port number.
+- The operating system is in the ssh and http-server services.
+- The web server port number is the last one.
+- For verbose mode: -v
+
+* Gobuster
+We can start enumerating directories with the help of a wordlist like this:
+#+begin_src bash
+gobuster dir -u http://$IP:3333 -w /path/to/the/wordlist
+#+end_src
+Make sure that the wordlist is for directory enumeration.
+The scanning will probably take a long time but eventually we will find several directories.
+** Questions
+- We can just try every directory until we reach the file upload page.
+
+* Burp Suite
+The next thing we have to do is to make the wordlist with the extensions and use Intruder to test which one it accepts.
+Then we upload a reverse shell to the server y we trigger it going to the URL.
+Make sure that your firewall is not blocking the ports in which you are listening.
+#+begin_src bash
+ncat -lnvp 1234
+#+end_src
+To listen. You will have to edit the reverse shell script to put your IP address and the port.
+Once inside:
+#+begin_src bash
+whoami
+#+end_src
+And we can see we are www-data.
+#+begin_src bash
+ls /home
+#+end_src
+And you will see the name of the user and inside that directory you can cat the user.txt file for the first flag.
+
+* Privilege escalation
+To exploit SETUID of systemctl you will want to create a service that executes /bin/bash and forwards it to you, like a new reverse shell.
+With that you can listen in another port and have complete access to this system.
